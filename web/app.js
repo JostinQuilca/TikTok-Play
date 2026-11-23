@@ -6,27 +6,16 @@
 'use strict';
 
 // ============================================================
-// 1. SCENE SCALING (Auto-fit 1080x1920 to any viewport)
+// 1. SCENE SCALING (Auto-fit 1080x1920 with CSS variable)
 // ============================================================
 function scaleScene() {
-  const scene  = document.getElementById('scene');
   const scaleX = window.innerWidth  / 1080;
   const scaleY = window.innerHeight / 1920;
   const scale  = Math.min(scaleX, scaleY);
-  scene.style.transform       = `scale(${scale})`;
-  scene.style.marginLeft      = `${(window.innerWidth  - 1080 * scale) / 2}px`;
-  scene.style.marginTop       = `${(window.innerHeight - 1920 * scale) / 2}px`;
-  scene.style.transformOrigin = 'top left';
+  document.documentElement.style.setProperty('--scene-scale', scale);
 }
 scaleScene();
-window.addEventListener('resize', () => {
-  scaleScene();
-  if (renderer && camera) {
-    camera.aspect = 1080 / 1920;
-    camera.updateProjectionMatrix();
-    renderer.setSize(1080, 1920);
-  }
-});
+window.addEventListener('resize', scaleScene);
 
 // ============================================================
 // 2. CONFIGURATION
@@ -81,12 +70,10 @@ function getAudioCtx() {
 function initStepperSynth() {
   if (!audioCtx) return;
   try {
-    // Stepper tone oscillator
     stepperOsc = audioCtx.createOscillator();
     stepperOsc.type = 'sawtooth';
     stepperOsc.frequency.setValueAtTime(160, audioCtx.currentTime);
 
-    // Filter for mechanical hum
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(450, audioCtx.currentTime);
@@ -95,7 +82,6 @@ function initStepperSynth() {
     stepperGain = audioCtx.createGain();
     stepperGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
 
-    // Noise buffer for mechanical belt friction
     const bufferSize = audioCtx.sampleRate * 2;
     const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
@@ -141,7 +127,6 @@ function startStepperSound() {
   stepperGain.gain.linearRampToValueAtTime(vol, now + 0.05);
   stepperNoiseGain.gain.linearRampToValueAtTime(vol * 0.35, now + 0.05);
 
-  // Modulate stepper pitch slightly
   if (stepperOsc) {
     stepperOsc.frequency.cancelScheduledValues(now);
     stepperOsc.frequency.setValueAtTime(180 + Math.random() * 40, now);
@@ -163,7 +148,6 @@ function playStampThud() {
   const now = ctx.currentTime;
   const vol = (CONFIG.audio_volume || 0.6) * 0.7;
 
-  // Low punch
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = 'triangle';
@@ -178,7 +162,6 @@ function playStampThud() {
   osc.start(now);
   osc.stop(now + 0.22);
 
-  // Slap snap
   const snap = ctx.createOscillator();
   const snapGain = ctx.createGain();
   snap.type = 'square';
@@ -259,16 +242,16 @@ let woodMesh, paperMesh, paperCanvas, paperCtx, paperTexture;
 let railLeft, railRight, gantryBar, printHeadMesh;
 
 // 3D Dimensional Constants
-const TABLE_W = 32;
-const TABLE_D = 44;
+const TABLE_W = 34;
+const TABLE_D = 46;
 const PAPER_W = 16.5;
 const PAPER_FLAT_LEN = 24.5;
 const PAPER_CURVE_LEN = 5.0;
 const PAPER_TOTAL_LEN = PAPER_FLAT_LEN + PAPER_CURVE_LEN;
 
 // Rail & Gantry bounds in 3D (X and Z)
-const RAIL_X_LEFT  = -PAPER_W * 0.5 - 1.2;
-const RAIL_X_RIGHT =  PAPER_W * 0.5 + 1.2;
+const RAIL_X_LEFT  = -PAPER_W * 0.5 - 1.4;
+const RAIL_X_RIGHT =  PAPER_W * 0.5 + 1.4;
 const RAIL_Z_MIN   = -13.0; // Top of printable area
 const RAIL_Z_MAX   =  10.0; // Bottom before curve
 
@@ -278,51 +261,54 @@ const CANVAS_H = 1800;
 
 function init3D() {
   const container = document.getElementById('canvas-container');
+  if (!container) {
+    console.error("canvas-container not found!");
+    return;
+  }
 
   // Scene
   scene3D = new THREE.Scene();
-  scene3D.background = new THREE.Color(0x110d0a);
+  scene3D.background = new THREE.Color(0x130e0a);
 
   // Camera: Perspective with steep plunge angle (55-60°) looking down at table
-  camera = new THREE.PerspectiveCamera(46, 1080 / 1920, 0.1, 150);
-  camera.position.set(0, 31, 23.5);
-  camera.lookAt(0, 0.8, -0.5);
+  camera = new THREE.PerspectiveCamera(50, 1080 / 1920, 0.1, 200);
+  camera.position.set(0, 36, 25);
+  camera.lookAt(0, 0.5, -1.0);
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
   renderer.setSize(1080, 1920);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.15;
   container.appendChild(renderer.domElement);
 
   // Lighting
-  const ambientLight = new THREE.AmbientLight(0xfff0db, 0.85);
+  const ambientLight = new THREE.AmbientLight(0xfff0db, 0.9);
   scene3D.add(ambientLight);
 
-  const warmKeyLight = new THREE.DirectionalLight(0xfff5ea, 1.35);
-  warmKeyLight.position.set(-16, 36, 18);
+  const warmKeyLight = new THREE.DirectionalLight(0xfff5ea, 1.4);
+  warmKeyLight.position.set(-16, 38, 20);
   warmKeyLight.castShadow = true;
   warmKeyLight.shadow.mapSize.width = 2048;
   warmKeyLight.shadow.mapSize.height = 2048;
   warmKeyLight.shadow.camera.near = 10;
-  warmKeyLight.shadow.camera.far = 70;
-  warmKeyLight.shadow.camera.left = -18;
-  warmKeyLight.shadow.camera.right = 18;
-  warmKeyLight.shadow.camera.top = 22;
-  warmKeyLight.shadow.camera.bottom = -22;
+  warmKeyLight.shadow.camera.far = 80;
+  warmKeyLight.shadow.camera.left = -22;
+  warmKeyLight.shadow.camera.right = 22;
+  warmKeyLight.shadow.camera.top = 26;
+  warmKeyLight.shadow.camera.bottom = -26;
   warmKeyLight.shadow.bias = -0.0006;
-  warmKeyLight.shadow.radius = 2.5;
   scene3D.add(warmKeyLight);
 
-  const fillLight = new THREE.DirectionalLight(0xffe2c0, 0.45);
-  fillLight.position.set(18, 25, -12);
+  const fillLight = new THREE.DirectionalLight(0xffe2c0, 0.5);
+  fillLight.position.set(20, 28, -12);
   scene3D.add(fillLight);
 
-  const rimLight = new THREE.PointLight(0xff8833, 0.6, 50);
-  rimLight.position.set(0, 8, -18);
+  const rimLight = new THREE.PointLight(0xff8833, 0.6, 60);
+  rimLight.position.set(0, 10, -20);
   scene3D.add(rimLight);
 
   // Build Wooden Table
@@ -424,7 +410,6 @@ function buildWoodTable() {
 
 // Build curved paper mesh hanging over table front
 function buildCurvedPaper() {
-  // Offscreen Paper Canvas
   paperCanvas = document.createElement('canvas');
   paperCanvas.width = CANVAS_W;
   paperCanvas.height = CANVAS_H;
@@ -437,32 +422,27 @@ function buildCurvedPaper() {
   paperTexture.magFilter = THREE.LinearFilter;
   paperTexture.wrapS = THREE.ClampToEdgeWrapping;
   paperTexture.wrapT = THREE.RepeatWrapping;
+  paperTexture.needsUpdate = true;
 
-  // Custom curved plane geometry
   const segmentsX = 24;
   const segmentsZ = 64;
   const paperGeo = new THREE.PlaneGeometry(PAPER_W, PAPER_TOTAL_LEN, segmentsX, segmentsZ);
-
-  // Orient to lie on XZ
   paperGeo.rotateX(-Math.PI / 2);
 
-  // Curve downward at front edge
   const pos = paperGeo.attributes.position;
-  const frontThreshold = 7.5; // Z where curvature starts
+  const frontThreshold = 7.5;
   const maxDrop = 3.8;
 
   for (let i = 0; i < pos.count; i++) {
     const z = pos.getZ(i);
     if (z > frontThreshold) {
-      const progress = (z - frontThreshold) / (PAPER_TOTAL_LEN * 0.5 - frontThreshold);
-      // Quarter-circle smooth drop
+      const progress = Math.min(Math.max((z - frontThreshold) / (PAPER_TOTAL_LEN * 0.5 - frontThreshold), 0), 1);
       const angle = progress * (Math.PI / 2.2);
       const dropY = -Math.sin(angle) * maxDrop;
       pos.setY(i, dropY + 0.08);
-      // Soft Z tuck
       pos.setZ(i, frontThreshold + Math.cos(angle) * (z - frontThreshold));
     } else {
-      pos.setY(i, 0.08); // elevated slightly above table to avoid z-fighting
+      pos.setY(i, 0.08);
     }
   }
   paperGeo.computeVertexNormals();
@@ -472,9 +452,7 @@ function buildCurvedPaper() {
     color: 0xffffff,
     roughness: 0.85,
     metalness: 0.02,
-    polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -2,
+    side: THREE.DoubleSide,
   });
 
   paperMesh = new THREE.Mesh(paperGeo, paperMat);
@@ -484,16 +462,13 @@ function buildCurvedPaper() {
 }
 
 function clearPaperCanvas() {
-  // Warm creamy paper background (#f5ead5)
   paperCtx.fillStyle = '#f5ebd2';
   paperCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Subtle clean paper texture/ruled border
   paperCtx.strokeStyle = 'rgba(195, 175, 140, 0.45)';
   paperCtx.lineWidth = 4;
   paperCtx.strokeRect(30, 30, CANVAS_W - 60, CANVAS_H - 60);
 
-  // Subtle grid guides
   paperCtx.strokeStyle = 'rgba(215, 195, 160, 0.15)';
   paperCtx.lineWidth = 1.5;
   for (let y = 60; y < CANVAS_H - 60; y += 40) {
@@ -552,7 +527,6 @@ function buildPlotterStructure() {
   // Mobile Horizontal Gantry Bar (Y Axis of Plotter)
   const gantryGroup = new THREE.Group();
 
-  // Dual crossbars
   const crossbarWidth = RAIL_X_RIGHT - RAIL_X_LEFT;
   const barGeo = new THREE.CylinderGeometry(0.18, 0.18, crossbarWidth + 0.8, 20);
   barGeo.rotateZ(Math.PI / 2);
@@ -567,7 +541,6 @@ function buildPlotterStructure() {
   bar2.castShadow = true;
   gantryGroup.add(bar2);
 
-  // Left & Right Gantry Carriage Blocks
   const sliderGeo = new THREE.BoxGeometry(1.2, 1.4, 1.8);
   const sliderLeft = new THREE.Mesh(sliderGeo, blackMat);
   sliderLeft.position.set(RAIL_X_LEFT, 0, 0);
@@ -586,13 +559,11 @@ function buildPlotterStructure() {
   // Mobile Print Head (X Axis of Plotter)
   const headGroup = new THREE.Group();
 
-  // Dark metallic head body
   const headBodyGeo = new THREE.BoxGeometry(2.1, 1.5, 1.5);
   const headBody = new THREE.Mesh(headBodyGeo, blackMat);
   headBody.castShadow = true;
   headGroup.add(headBody);
 
-  // Golden Pen Holder / Extruder Nozzle
   const nozzleGeo = new THREE.CylinderGeometry(0.12, 0.04, 1.2, 16);
   const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.25 });
   const nozzle = new THREE.Mesh(nozzleGeo, goldMat);
@@ -600,7 +571,6 @@ function buildPlotterStructure() {
   nozzle.castShadow = true;
   headGroup.add(nozzle);
 
-  // Cyan status LED
   const ledGeo = new THREE.SphereGeometry(0.09, 12, 12);
   const ledMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
   const led = new THREE.Mesh(ledGeo, ledMat);
@@ -614,8 +584,6 @@ function buildPlotterStructure() {
 
 // Set Plotter 3D Positions based on normalized canvas coordinates [0..1]
 function setPlotterPosition(normX, normY) {
-  // normX: 0 (left) to 1 (right)
-  // normY: 0 (top) to 1 (bottom)
   const marginW = 1.6;
   const xMin = RAIL_X_LEFT + marginW;
   const xMax = RAIL_X_RIGHT - marginW;
@@ -625,9 +593,13 @@ function setPlotterPosition(normX, normY) {
   const zMax = RAIL_Z_MAX - 1.2;
   const targetZ = zMin + normY * (zMax - zMin);
 
-  gantryBar.position.z = targetZ;
-  printHeadMesh.position.z = targetZ;
-  printHeadMesh.position.x = targetX;
+  if (gantryBar) {
+    gantryBar.position.z = targetZ;
+  }
+  if (printHeadMesh) {
+    printHeadMesh.position.z = targetZ;
+    printHeadMesh.position.x = targetX;
+  }
 }
 
 // ============================================================
@@ -636,15 +608,9 @@ function setPlotterPosition(normX, normY) {
 const printQueue = [];
 let isPrinting = false;
 
-// 3x3 Grid Slot Definition
-// Slot indices:
-// 0  1  2
-// 3  4  5
-// 6  7  8
 let pageSlots = new Array(9).fill(null);
 let hasDrawingsOnPage = false;
 
-// Compute Slot Coordinates on the 1200x1800 Canvas
 const GRID_MARGIN_X = 90;
 const GRID_MARGIN_Y = 120;
 const GRID_GAP_X    = 40;
@@ -652,8 +618,8 @@ const GRID_GAP_Y    = 50;
 const GRID_COLS     = 3;
 const GRID_ROWS     = 3;
 
-const SLOT_W = (CANVAS_W - GRID_MARGIN_X * 2 - GRID_GAP_X * (GRID_COLS - 1)) / GRID_COLS; // ~313 px
-const SLOT_H = (CANVAS_H - GRID_MARGIN_Y * 2 - GRID_GAP_Y * (GRID_ROWS - 1)) / GRID_ROWS; // ~486 px
+const SLOT_W = (CANVAS_W - GRID_MARGIN_X * 2 - GRID_GAP_X * (GRID_COLS - 1)) / GRID_COLS;
+const SLOT_H = (CANVAS_H - GRID_MARGIN_Y * 2 - GRID_GAP_Y * (GRID_ROWS - 1)) / GRID_ROWS;
 
 function getSlotRect(slotIdx) {
   const col = slotIdx % GRID_COLS;
@@ -664,7 +630,6 @@ function getSlotRect(slotIdx) {
 }
 
 function getBigRect(anchorSlot) {
-  // 2x2 spans 2 columns and 2 rows
   const rect0 = getSlotRect(anchorSlot);
   const w = SLOT_W * 2 + GRID_GAP_X;
   const h = SLOT_H * 2 + GRID_GAP_Y;
@@ -675,11 +640,11 @@ function findSlotForPrint() {
   for (let i = 0; i < 9; i++) {
     if (pageSlots[i] === null) return i;
   }
-  return -1; // page full
+  return -1;
 }
 
 function findAnchorForBig() {
-  const anchors = [0, 1, 3, 4]; // valid 2x2 top-left anchors in 3x3
+  const anchors = [0, 1, 3, 4];
   for (const anchor of anchors) {
     const s0 = anchor;
     const s1 = anchor + 1;
@@ -694,7 +659,7 @@ function findAnchorForBig() {
       return anchor;
     }
   }
-  return -1; // no 2x2 fit
+  return -1;
 }
 
 function updateHUDStatus() {
@@ -715,7 +680,6 @@ function setStatusPill(text, isGreen = true) {
 
 function enqueuePrintJob(job) {
   if (job.tier === 'vip') {
-    // VIP jumps to the front of queue
     printQueue.unshift(job);
   } else {
     printQueue.push(job);
@@ -730,7 +694,6 @@ async function processNextJob() {
     isPrinting = false;
     updateHUDStatus();
     setStatusPill('Ready to print');
-    // Park head smoothly at top center
     setPlotterPosition(0.5, 0.05);
     return;
   }
@@ -753,27 +716,24 @@ async function processNextJob() {
 // 6. DRAWING & PLOTTER SWEEP ANIMATION
 // ============================================================
 async function executeJob(job) {
-  const { tier, user, avatar, gift, count } = job;
+  const { tier, user, avatar } = job;
   setStatusPill(`Drawing @${user} - Queue: ${printQueue.length}`, false);
 
-  // Preload avatar image
   const avatarImg = await loadAvatarImage(user, avatar);
 
   if (tier === 'vip') {
-    // SUPER VIP Workflow
     if (hasDrawingsOnPage) {
       await advancePaperPage();
     }
     await drawVipPage(job, avatarImg);
-    await sleep(2500); // Keep VIP visible for 2.5 seconds
-    await advancePaperPage(); // Advance to fresh page for next prints
+    await sleep(2500);
+    await advancePaperPage();
   } else if (tier === 'big') {
     let anchor = findAnchorForBig();
     if (anchor === -1) {
       await advancePaperPage();
-      anchor = 0; // Fresh page top-left
+      anchor = 0;
     }
-    // Mark 2x2 slots as occupied
     pageSlots[anchor] = job;
     pageSlots[anchor + 1] = job;
     pageSlots[anchor + 3] = job;
@@ -784,7 +744,6 @@ async function executeJob(job) {
     const rect = getBigRect(anchor);
     await drawCardSweep(rect, job, avatarImg, 'big');
   } else {
-    // Standard 'print' (1x1)
     let slot = findSlotForPrint();
     if (slot === -1) {
       await advancePaperPage();
@@ -800,7 +759,6 @@ async function executeJob(job) {
   updateHUDStatus();
 }
 
-// Smooth Paper Roll Downwards Animation (rolls to front curved edge)
 async function advancePaperPage() {
   const duration = CONFIG.paper_scroll_speed_ms || 900;
   const startTime = performance.now();
@@ -810,12 +768,10 @@ async function advancePaperPage() {
     function animateScroll(now) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Smooth cubic ease-in-out
       const ease = progress < 0.5
         ? 4 * progress * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
-      // Animate texture offset downwards
       paperTexture.offset.y = -ease;
 
       if (progress < 1) {
@@ -834,9 +790,7 @@ async function advancePaperPage() {
   stopStepperSound();
 }
 
-// Progressive Sweep Reveal for 1x1 (print) and 2x2 (big)
 async function drawCardSweep(rect, job, avatarImg, tier) {
-  // Pre-render the full card on a temporary canvas
   const cardCanvas = document.createElement('canvas');
   cardCanvas.width = rect.w;
   cardCanvas.height = rect.h;
@@ -852,11 +806,8 @@ async function drawCardSweep(rect, job, avatarImg, tier) {
     function step(now) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-
-      // Sweep line from top (0) to bottom (rect.h)
       const currentH = Math.max(1, Math.floor(progress * rect.h));
 
-      // Draw revealed portion onto main paper canvas
       paperCtx.drawImage(
         cardCanvas,
         0, 0, rect.w, currentH,
@@ -864,8 +815,6 @@ async function drawCardSweep(rect, job, avatarImg, tier) {
       );
       paperTexture.needsUpdate = true;
 
-      // Synchronize 3D plotter physical movement
-      // X oscillates rapidly across the card width
       const scanPasses = tier === 'big' ? 18 : 12;
       const headOsc = 0.5 + 0.5 * Math.sin(progress * Math.PI * scanPasses);
       const currPixelX = rect.x + headOsc * rect.w;
@@ -876,7 +825,6 @@ async function drawCardSweep(rect, job, avatarImg, tier) {
       if (progress < 1) {
         requestAnimationFrame(step);
       } else {
-        // Ensure final full card is drawn
         paperCtx.drawImage(cardCanvas, rect.x, rect.y);
         paperTexture.needsUpdate = true;
         resolve();
@@ -888,23 +836,19 @@ async function drawCardSweep(rect, job, avatarImg, tier) {
   stopStepperSound();
 }
 
-// Render Card Content (Border, Circular Avatar, Username, Gift Badge)
 function renderCardOnContext(ctx, w, h, job, avatarImg, tier) {
   const isBig = tier === 'big';
 
-  // Card background
   ctx.fillStyle = '#ffffff';
   const radius = isBig ? 14 : 10;
   roundRect(ctx, 4, 4, w - 8, h - 8, radius);
   ctx.fill();
 
-  // Border
   ctx.lineWidth = isBig ? 6 : 3;
   ctx.strokeStyle = isBig ? '#ff8c00' : '#222222';
   roundRect(ctx, 4, 4, w - 8, h - 8, radius);
   ctx.stroke();
 
-  // Circular Avatar
   const avatarSize = isBig ? Math.min(w * 0.58, h * 0.46) : Math.min(w * 0.65, h * 0.45);
   const avatarX = w * 0.5;
   const avatarY = isBig ? h * 0.38 : h * 0.38;
@@ -924,7 +868,6 @@ function renderCardOnContext(ctx, w, h, job, avatarImg, tier) {
       avatarSize
     );
   } else {
-    // Elegant fallback initials
     ctx.fillStyle = '#4f46e5';
     ctx.fillRect(avatarX - avatarSize * 0.5, avatarY - avatarSize * 0.5, avatarSize, avatarSize);
     ctx.fillStyle = '#ffffff';
@@ -935,14 +878,12 @@ function renderCardOnContext(ctx, w, h, job, avatarImg, tier) {
   }
   ctx.restore();
 
-  // Avatar Ring
   ctx.beginPath();
   ctx.arc(avatarX, avatarY, avatarSize * 0.5, 0, Math.PI * 2);
   ctx.lineWidth = isBig ? 4 : 2.5;
   ctx.strokeStyle = isBig ? '#ffa726' : '#333333';
   ctx.stroke();
 
-  // Username
   ctx.fillStyle = '#18181b';
   ctx.font = isBig ? 'bold 26px sans-serif' : 'bold 18px sans-serif';
   ctx.textAlign = 'center';
@@ -950,7 +891,6 @@ function renderCardOnContext(ctx, w, h, job, avatarImg, tier) {
   const nameY = avatarY + avatarSize * 0.5 + (isBig ? 34 : 26);
   ctx.fillText(`@${job.user}`, avatarX, nameY, w - 24);
 
-  // Gift Badge Pill
   const giftY = nameY + (isBig ? 38 : 28);
   const giftText = `${job.gift || 'Gift'} ${job.count > 1 ? `x${job.count}` : ''}`;
   ctx.font = isBig ? '600 20px sans-serif' : '600 14px sans-serif';
@@ -976,7 +916,6 @@ function renderCardOnContext(ctx, w, h, job, avatarImg, tier) {
 async function drawVipPage(job, avatarImg) {
   playFanfare();
 
-  // Step 1: Pre-render full VIP page template on offscreen canvas
   const vipCanvas = document.createElement('canvas');
   vipCanvas.width = CANVAS_W;
   vipCanvas.height = CANVAS_H;
@@ -984,7 +923,6 @@ async function drawVipPage(job, avatarImg) {
 
   renderVipBaseTemplate(vctx, job, avatarImg);
 
-  // Step 2: Animate Plotter head sweeping VIP page down
   const duration = CONFIG.print_speed_ms * 1.8;
   const startTime = performance.now();
   startStepperSound();
@@ -1002,7 +940,6 @@ async function drawVipPage(job, avatarImg) {
       );
       paperTexture.needsUpdate = true;
 
-      // Plotter head sweep movement
       const headOsc = 0.5 + 0.45 * Math.sin(progress * Math.PI * 24);
       setPlotterPosition(headOsc, (currentH + 60) / CANVAS_H);
 
@@ -1018,7 +955,6 @@ async function drawVipPage(job, avatarImg) {
   });
   stopStepperSound();
 
-  // Step 3: Punch Two Tilted Stamps with Dry Thud
   await sleep(200);
   playStampThud();
   stampSuperVipBadge(paperCtx);
@@ -1031,31 +967,25 @@ async function drawVipPage(job, avatarImg) {
 }
 
 function renderVipBaseTemplate(ctx, job, avatarImg) {
-  // Thick Black Outer Page Frame
   ctx.strokeStyle = '#18181b';
   ctx.lineWidth = 14;
   roundRect(ctx, 50, 50, CANVAS_W - 100, CANVAS_H - 100, 24);
   ctx.stroke();
 
-  // Decorative inner double golden border
   ctx.strokeStyle = '#d4af37';
   ctx.lineWidth = 4;
   roundRect(ctx, 70, 70, CANVAS_W - 140, CANVAS_H - 140, 16);
   ctx.stroke();
 
-  // Top Title Banner
   ctx.fillStyle = '#b91c1c';
   ctx.font = '900 44px sans-serif';
   ctx.textAlign = 'center';
-  ctx.letterSpacing = '4px';
   ctx.fillText('★ LEGENDARY VIP ★', CANVAS_W * 0.5, 160);
 
-  // Giant Circular Avatar with Gold & Red Ornamental Crown/Frame
   const avatarSize = 460;
   const avatarX = CANVAS_W * 0.5;
   const avatarY = CANVAS_H * 0.44;
 
-  // Ornamental Sunburst / Crown rays
   ctx.save();
   ctx.translate(avatarX, avatarY);
   ctx.strokeStyle = '#f59e0b';
@@ -1069,21 +999,18 @@ function renderVipBaseTemplate(ctx, job, avatarImg) {
   }
   ctx.restore();
 
-  // Outer Gold Frame Ring
   ctx.beginPath();
   ctx.arc(avatarX, avatarY, avatarSize * 0.54, 0, Math.PI * 2);
   ctx.lineWidth = 12;
   ctx.strokeStyle = '#eab308';
   ctx.stroke();
 
-  // Red Inner Accent Ring
   ctx.beginPath();
   ctx.arc(avatarX, avatarY, avatarSize * 0.51, 0, Math.PI * 2);
   ctx.lineWidth = 6;
   ctx.strokeStyle = '#dc2626';
   ctx.stroke();
 
-  // Circular Avatar Clip
   ctx.save();
   ctx.beginPath();
   ctx.arc(avatarX, avatarY, avatarSize * 0.49, 0, Math.PI * 2);
@@ -1109,7 +1036,6 @@ function renderVipBaseTemplate(ctx, job, avatarImg) {
   }
   ctx.restore();
 
-  // "TOP 1" Ornamental Crest Badge
   const badgeY = avatarY - avatarSize * 0.5 - 32;
   ctx.fillStyle = '#dc2626';
   roundRect(ctx, avatarX - 110, badgeY - 30, 220, 60, 30);
@@ -1125,20 +1051,17 @@ function renderVipBaseTemplate(ctx, job, avatarImg) {
   ctx.textBaseline = 'middle';
   ctx.fillText('👑 TOP 1', avatarX, badgeY);
 
-  // Large Username
   ctx.fillStyle = '#0f172a';
   ctx.font = '900 62px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(`@${job.user}`, avatarX, avatarY + avatarSize * 0.5 + 75, CANVAS_W - 160);
 
-  // Gift Description Label
   ctx.fillStyle = '#b45309';
   ctx.font = 'bold 36px sans-serif';
   ctx.fillText(`Sent: ${job.gift || 'Legendary Gift'} (${job.diamonds || 100}+ Coins)`, avatarX, avatarY + avatarSize * 0.5 + 145);
 }
 
-// Right Stamp: Red Rectangular "SUPER VIP" tilted ~ -12°
 function stampSuperVipBadge(ctx) {
   ctx.save();
   const stampX = CANVAS_W - 270;
@@ -1146,7 +1069,6 @@ function stampSuperVipBadge(ctx) {
   ctx.translate(stampX, stampY);
   ctx.rotate((-12 * Math.PI) / 180);
 
-  // Grungy ink effect
   ctx.strokeStyle = 'rgba(220, 38, 38, 0.92)';
   ctx.lineWidth = 7;
   roundRect(ctx, -140, -45, 280, 90, 10);
@@ -1161,13 +1083,11 @@ function stampSuperVipBadge(ctx) {
   ctx.font = '900 36px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.letterSpacing = '3px';
   ctx.fillText('SUPER VIP', 0, 0);
 
   ctx.restore();
 }
 
-// Left Stamp: Gold Cursive "Thank You" tilted ~ 15°
 function stampThankYouBadge(ctx) {
   ctx.save();
   const stampX = 270;
@@ -1175,7 +1095,6 @@ function stampThankYouBadge(ctx) {
   ctx.translate(stampX, stampY);
   ctx.rotate((15 * Math.PI) / 180);
 
-  // Outer Oval
   ctx.strokeStyle = 'rgba(180, 130, 20, 0.88)';
   ctx.lineWidth = 5;
   ctx.beginPath();
@@ -1197,7 +1116,6 @@ function stampThankYouBadge(ctx) {
   ctx.restore();
 }
 
-// Utility: Canvas Rounded Rectangle Helper
 function roundRect(ctx, x, y, width, height, radius) {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -1212,7 +1130,6 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
-// Avatar Preloader with Proxy and Fallback
 function loadAvatarImage(user, avatarUrl) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1224,7 +1141,6 @@ function loadAvatarImage(user, avatarUrl) {
 
     img.onload = () => resolve(img);
     img.onerror = () => {
-      // Fallback dicebear directly
       const fallback = new Image();
       fallback.crossOrigin = 'anonymous';
       fallback.onload = () => resolve(fallback);
@@ -1337,7 +1253,6 @@ document.addEventListener('keydown', e => {
       enqueuePrintJob(createMockJob('vip'));
       break;
     case '4':
-      // Burst of 5 mixed gifts
       for (let i = 0; i < 5; i++) {
         const tiers = ['print', 'print', 'big', 'print', 'vip'];
         const tier = tiers[i % tiers.length];
@@ -1368,10 +1283,10 @@ let frames = 0;
 function animate(now) {
   requestAnimationFrame(animate);
 
-  // Render 3D Scene
-  renderer.render(scene3D, camera);
+  if (renderer && scene3D && camera) {
+    renderer.render(scene3D, camera);
+  }
 
-  // FPS calculation
   frames++;
   if (now - lastFpsTime >= 1000) {
     updateHUD('fps', `FPS: ${frames}`);
@@ -1381,16 +1296,24 @@ function animate(now) {
 }
 
 (async function boot() {
-  await fetchConfig();
-  init3D();
-  connectWS();
-  updateHUDStatus();
+  try {
+    scaleScene();
+    window.addEventListener('resize', scaleScene);
+    await fetchConfig();
+    init3D();
+    connectWS();
+    updateHUDStatus();
 
-  // Park plotter at start position
-  setPlotterPosition(0.5, 0.05);
+    setPlotterPosition(0.5, 0.05);
 
-  requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
 
-  console.log('%c🖨️ TikTok Plotter 3D Live', 'font-size:22px;color:#d4af37;font-weight:bold');
-  console.log('%cKeys: 1=Print(1x1)  2=Big(2x2)  3=SUPER VIP  4=Burst  H=HUD  M=Mute', 'color:#bbb');
+    console.log('%c🖨️ TikTok Plotter 3D Live Ready', 'font-size:22px;color:#d4af37;font-weight:bold');
+  } catch (err) {
+    console.error('Fatal initialization error:', err);
+    const errDiv = document.createElement('div');
+    errDiv.style.cssText = 'position:fixed;top:20px;left:20px;background:rgba(220,38,38,0.92);color:white;padding:20px;border-radius:12px;font-family:sans-serif;font-size:16px;z-index:999999;box-shadow:0 10px 30px rgba(0,0,0,0.5);';
+    errDiv.innerHTML = `<b>Error al iniciar escena 3D:</b><br>${err.message}`;
+    document.body.appendChild(errDiv);
+  }
 })();

@@ -5,11 +5,17 @@
   <meta name="viewport" content="width=1080" />
   <title>TikTok Plotter 3D Live 🖨️✨</title>
   <link rel="stylesheet" href="styles.css" />
-  <!-- Three.js CDN -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <!-- Local Three.js (No internet/CDN dependency) -->
+  <script src="three.min.js"></script>
+  <!-- CDN Fallback in case local file is missing -->
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"><\/script>');
+    }
+  </script>
 </head>
 <body>
-  <!-- Main 1080x1920 viewport wrapper -->
+  <!-- Main 1080x1920 viewport wrapper centered & auto-scaled -->
   <div id="scene">
     <!-- 3D WebGL Canvas Container -->
     <div id="canvas-container"></div>
