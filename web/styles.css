@@ -1,0 +1,709 @@
+/* ============================================================
+   TikTok Printer Live — styles.css
+   Fixed 1080x1920 vertical scene, auto-scaled for any screen
+   ============================================================ */
+
+/* ---------- Reset & Root ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --scene-w: 1080px;
+  --scene-h: 1920px;
+  --paper-w: 680px;
+  --wood-dark:   #2c1a0e;
+  --wood-mid:    #3d2512;
+  --metal-dark:  #1a1a2e;
+  --metal-light: #4a4a6a;
+  --paper-cream: #f5ead5;
+  --paper-line:  #e0d0b0;
+  --fire-orange: #ff6b1a;
+  --fire-yellow: #ffd700;
+  --gold:        #ffd700;
+  --neon-pink:   #ff00ff;
+  --neon-cyan:   #00ffff;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ---- Main scene wrapper (1080x1920, auto-scale) ---- */
+#scene {
+  position: relative;
+  width:  var(--scene-w);
+  height: var(--scene-h);
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 0%, #1a0a3e 0%, transparent 60%),
+    linear-gradient(180deg, #0d0820 0%, #1a0d2e 30%, #0a0510 60%, #150800 100%);
+  transform-origin: top left;
+  /* JS will set the scale transform */
+}
+
+/* ================================================================
+   PRINTER ZONE
+   ================================================================ */
+#printer-zone {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 420px;
+  z-index: 10;
+}
+
+#printer-ceiling {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Vertical rails on sides */
+#vertical-rail-left,
+#vertical-rail-right {
+  position: absolute;
+  top: 0;
+  width: 22px;
+  height: 100%;
+  background: linear-gradient(90deg, #2a2a4a, #4a4a7a, #2a2a4a);
+  border-radius: 4px;
+  box-shadow: 0 0 12px rgba(100,100,255,0.4);
+}
+#vertical-rail-left  { left: 160px; }
+#vertical-rail-right { right: 160px; }
+
+/* Rail screws */
+#vertical-rail-left::before,  #vertical-rail-left::after,
+#vertical-rail-right::before, #vertical-rail-right::after {
+  content: '';
+  position: absolute;
+  width: 10px; height: 10px;
+  background: #888;
+  border-radius: 50%;
+  left: 50%; transform: translateX(-50%);
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+}
+#vertical-rail-left::before,  #vertical-rail-right::before { top: 20px; }
+#vertical-rail-left::after,   #vertical-rail-right::after  { top: 320px; }
+
+/* Printer body */
+#printer-body {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 820px;
+  background: linear-gradient(180deg, #1e1e3e 0%, #2a2a50 50%, #1a1a38 100%);
+  border: 2px solid #4a4aaa;
+  border-radius: 16px 16px 8px 8px;
+  box-shadow:
+    0 0 30px rgba(80,80,255,0.3),
+    0 4px 20px rgba(0,0,0,0.8),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  padding: 0 20px;
+}
+
+#printer-logo {
+  text-align: center;
+  padding: 12px 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #7af;
+  text-shadow: 0 0 10px rgba(100,170,255,0.8);
+}
+
+/* Carriage track */
+#carriage-track {
+  position: relative;
+  height: 56px;
+  margin: 8px 0;
+  background: linear-gradient(180deg, #111128 0%, #1a1a35 100%);
+  border: 1px solid #3a3a6a;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+/* Track lines */
+#carriage-track::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 10px; right: 10px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #4a4aaa, transparent);
+  transform: translateY(-50%);
+}
+
+/* Carriage (animated left↔right) */
+#carriage {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  width: 70px;
+  height: 44px;
+  background: linear-gradient(135deg, #3a5a8a, #5a7aaa);
+  border: 1px solid #7aaae0;
+  border-radius: 6px;
+  box-shadow:
+    0 0 15px rgba(100,170,255,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: left 0s linear;
+}
+
+#carriage.printing {
+  animation: carriageMove 1.2s linear infinite alternate;
+}
+
+@keyframes carriageMove {
+  0%   { left: 10px; }
+  100% { left: calc(100% - 80px); }
+}
+
+/* Print head (nozzle at bottom of carriage) */
+#printhead {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 10px;
+  background: #c0c0e0;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 0 8px rgba(100,200,255,0.8);
+}
+#printhead::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px; height: 6px;
+  background: #60c0ff;
+  border-radius: 0 0 2px 2px;
+  box-shadow: 0 0 6px #60c0ff;
+}
+
+/* Ink drops during printing */
+#ink-drops.active::after {
+  content: '·';
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  color: #60c0ff;
+  font-size: 24px;
+  animation: inkDrop 0.3s ease-out forwards;
+}
+
+@keyframes inkDrop {
+  0%   { opacity: 1; transform: translateY(0) translateX(-50%); }
+  100% { opacity: 0; transform: translateY(12px) translateX(-50%); }
+}
+
+/* Paper slot */
+#paper-slot {
+  width: 100%;
+  height: 14px;
+  background: linear-gradient(180deg, #0a0a1a, #111128);
+  border: 1px solid #2a2a4a;
+  border-radius: 2px;
+  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
+}
+#paper-slot::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(var(--paper-w) - 40px);
+  height: 4px;
+  background: rgba(245,234,213,0.3);
+  border-radius: 2px;
+}
+
+/* Rail connections */
+#rail-left, #rail-right {
+  position: absolute;
+  top: 60px;
+  width: 170px;
+  height: 10px;
+  background: linear-gradient(90deg, #2a2a5a, #4a4a8a);
+  border-radius: 5px;
+}
+#rail-left  { left: 0; }
+#rail-right { right: 0; transform: scaleX(-1); }
+
+/* ================================================================
+   PAPER ROLL
+   ================================================================ */
+#paper-container {
+  position: absolute;
+  top: 400px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--paper-w);
+  bottom: 300px;
+  overflow: hidden;
+  z-index: 5;
+}
+
+#paper-edge-left,
+#paper-edge-right {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 12px;
+  z-index: 6;
+  pointer-events: none;
+}
+#paper-edge-left {
+  left: 0;
+  background: linear-gradient(90deg, #c8b898, transparent);
+}
+#paper-edge-right {
+  right: 0;
+  background: linear-gradient(270deg, #c8b898, transparent);
+}
+
+#paper-roll {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  /* Height grows as content added, scrolled via transform */
+  min-height: 100%;
+  background: var(--paper-cream);
+  /* Subtle ruled lines */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      var(--paper-line) 39px,
+      var(--paper-line) 40px
+    );
+  box-shadow: 2px 0 8px rgba(0,0,0,0.3), -2px 0 8px rgba(0,0,0,0.3);
+  transform: translateY(0);
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+#paper-content {
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* ---- Print Job Rows ---- */
+.print-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  flex-shrink: 0;
+}
+
+/* ---- Single print card ---- */
+.print-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  clip-path: inset(100% 0 0 0); /* Start hidden, revealed top-to-bottom */
+  transition: clip-path 0s linear;
+}
+
+.print-card.revealed {
+  clip-path: inset(0% 0 0 0);
+  transition: clip-path 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tier: print (small, 2 per row) */
+.print-card.tier-print {
+  width: 270px;
+}
+.print-card.tier-print .card-frame {
+  width: 230px;
+  height: 230px;
+  border: 6px solid #c4a882;
+  border-radius: 8px;
+  background: white;
+  padding: 6px;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Tier: big (full width) */
+.print-card.tier-big {
+  width: 580px;
+}
+.print-card.tier-big .card-frame {
+  width: 540px;
+  height: 300px;
+  border: 8px solid #ff8c00;
+  border-radius: 12px;
+  background: white;
+  padding: 8px;
+  box-shadow: 0 0 20px rgba(255,140,0,0.4), 2px 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Tier: vip (full width, gold border) */
+.print-card.tier-vip {
+  width: 620px;
+}
+.print-card.tier-vip .card-frame {
+  width: 580px;
+  height: 360px;
+  border: 10px solid;
+  border-image: linear-gradient(135deg, #ffd700, #ff00ff, #00ffff, #ffd700) 1;
+  border-radius: 0;
+  background: white;
+  padding: 10px;
+  box-shadow:
+    0 0 30px rgba(255,215,0,0.6),
+    0 0 60px rgba(255,0,255,0.3),
+    2px 2px 15px rgba(0,0,0,0.5);
+  animation: vipGlow 2s ease-in-out infinite;
+}
+
+@keyframes vipGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,0,255,0.3), 2px 2px 15px rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 0 50px rgba(255,215,0,0.9), 0 0 90px rgba(255,0,255,0.5), 2px 2px 15px rgba(0,0,0,0.5); }
+}
+
+/* Avatar inside card */
+.card-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+/* Fallback avatar (SVG data URI placeholder) */
+.card-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 4px;
+}
+
+/* Username label */
+.card-username {
+  margin-top: 6px;
+  font-weight: 700;
+  color: #2c1a0e;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.tier-print  .card-username { font-size: 15px; }
+.tier-big    .card-username { font-size: 20px; }
+.tier-vip    .card-username { font-size: 24px; color: #8b0000; }
+
+/* Gift label */
+.card-gift {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+.tier-big  .card-gift { font-size: 14px; color: #ff6600; font-weight: 600; }
+.tier-vip  .card-gift {
+  font-size: 18px;
+  font-weight: 800;
+  color: transparent;
+  background: linear-gradient(90deg, #ffd700, #ff00ff, #00ffff);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* VIP crown badge */
+.vip-badge {
+  position: absolute;
+  top: -6px; right: -6px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 20px;
+  box-shadow: 0 0 10px rgba(255,215,0,0.7);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  z-index: 2;
+}
+
+/* Burn effect */
+.print-card.burning {
+  animation: burnCard 1.5s ease-in forwards;
+}
+
+@keyframes burnCard {
+  0%   { opacity: 1; filter: none; transform: none; }
+  40%  { opacity: 0.8; filter: brightness(1.5) sepia(0.5); transform: scale(1.02); }
+  70%  { opacity: 0.4; filter: brightness(2) sepia(1) hue-rotate(-20deg); transform: scale(0.98) rotate(-1deg); }
+  100% { opacity: 0; filter: brightness(3) blur(4px); transform: scaleY(0.1) translateY(20px); }
+}
+
+/* ================================================================
+   FIRE ZONE
+   ================================================================ */
+#fire-zone {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 380px;
+  z-index: 15;
+}
+
+#campfire-base {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, transparent 0%, #0d0510 20%, #150800 100%);
+}
+
+/* Logs */
+#logs-container {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 80px;
+}
+
+.log {
+  position: absolute;
+  height: 28px;
+  background: linear-gradient(90deg, #2c1a0a, #3d2510, #2c1a0a);
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+}
+.log::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 10px; right: 10px;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+}
+.log1 { width: 300px; left: 50%; transform: translateX(-50%) rotate(-15deg); bottom: 0; }
+.log2 { width: 260px; left: 50%; transform: translateX(-50%) rotate(20deg);  bottom: 0; }
+.log3 { width: 200px; left: 50%; transform: translateX(-50%) rotate(0deg);   bottom: 25px; }
+
+/* Fire canvas */
+#fire-canvas {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  pointer-events: none;
+}
+
+/* Ember glow (CSS radial gradient that pulses) */
+#ember-glow {
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 200px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255,100,20,0.5) 0%, rgba(255,50,0,0.2) 40%, transparent 70%);
+  animation: glowPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.7; transform: translateX(-50%) scaleX(1); }
+  50%       { opacity: 1;   transform: translateX(-50%) scaleX(1.08); }
+}
+
+/* ================================================================
+   LEGEND PANEL
+   ================================================================ */
+#legend-panel {
+  position: absolute;
+  bottom: 390px;
+  right: 24px;
+  background: rgba(0,0,0,0.65);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 12px 16px;
+  backdrop-filter: blur(8px);
+  z-index: 20;
+  min-width: 190px;
+}
+
+.legend-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.legend-item:last-child { border-bottom: none; }
+
+.legend-emoji { font-size: 20px; }
+.legend-text  { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500; }
+
+#legend-vip .legend-text {
+  background: linear-gradient(90deg, #ffd700, #ff00ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+
+/* ================================================================
+   DEBUG HUD
+   ================================================================ */
+#debug-hud {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: rgba(0,0,0,0.8);
+  border: 1px solid #0f0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: monospace;
+  font-size: 13px;
+  color: #0f0;
+  z-index: 100;
+  display: flex;
+  gap: 16px;
+}
+#debug-hud.hidden { display: none; }
+
+/* ================================================================
+   MUTE BUTTON
+   ================================================================ */
+#mute-btn {
+  position: absolute;
+  bottom: 400px;
+  left: 24px;
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 20;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  user-select: none;
+}
+#mute-btn:hover { opacity: 1; }
+
+/* ================================================================
+   VIP OVERLAY
+   ================================================================ */
+#vip-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255,215,0,0.15) 0%, transparent 70%);
+}
+#vip-overlay.hidden { display: none; }
+
+#vip-title {
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-align: center;
+  background: linear-gradient(90deg, #ffd700, #ff00ff, #00ffff, #ffd700);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: vipTitle 3s ease-out forwards, gradientShift 1.5s linear infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 0 20px rgba(255,215,0,0.8));
+  padding: 20px;
+}
+
+@keyframes vipTitle {
+  0%   { opacity: 0; transform: scale(0.5); }
+  20%  { opacity: 1; transform: scale(1.1); }
+  80%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes gradientShift {
+  0%   { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+#vip-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vip-particle {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  animation: vipParticleAnim var(--dur, 2s) ease-out forwards;
+}
+
+@keyframes vipParticleAnim {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--tx, 0), var(--ty, -200px)) scale(0); }
+}
+
+/* ================================================================
+   STARFIELD BACKGROUND
+   ================================================================ */
+#scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 8%,  rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 5%,  rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 12%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 18%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 25%, rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(2px 2px at 50% 10%, rgba(255,255,255,0.6) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ================================================================
+   UTILITY
+   ================================================================ */
+.hidden { display: none !important; }
+
+/* Fade-in for new print rows */
+@keyframes rowFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.print-row {
+  animation: rowFadeIn 0.3s ease-out;
+}

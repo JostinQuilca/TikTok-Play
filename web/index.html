@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1080" />
+  <title>TikTok Printer Live 🖨️🔥</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Main 1080x1920 canvas wrapper -->
+  <div id="scene">
+
+    <!-- ═══════════════════════════════════
+         PRINTER ZONE (top 55%)
+    ════════════════════════════════════ -->
+    <div id="printer-zone">
+      <!-- Ceiling mount / structure -->
+      <div id="printer-ceiling">
+        <div id="rail-left"></div>
+        <div id="rail-right"></div>
+        <div id="printer-body">
+          <div id="printer-logo">🖨️ PRINT-O-MATIC 3000</div>
+          <div id="carriage-track">
+            <div id="carriage">
+              <div id="printhead"></div>
+              <div id="ink-drops"></div>
+            </div>
+          </div>
+          <div id="paper-slot"></div>
+        </div>
+        <div id="vertical-rail-left"></div>
+        <div id="vertical-rail-right"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         PAPER ROLL (center, scrolling)
+    ════════════════════════════════════ -->
+    <div id="paper-container">
+      <div id="paper-roll">
+        <div id="paper-content">
+          <!-- Print jobs are injected here dynamically -->
+        </div>
+      </div>
+      <div id="paper-edge-left"></div>
+      <div id="paper-edge-right"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         FIRE ZONE (bottom 25%)
+    ════════════════════════════════════ -->
+    <div id="fire-zone">
+      <div id="campfire-base">
+        <div id="logs-container">
+          <div class="log log1"></div>
+          <div class="log log2"></div>
+          <div class="log log3"></div>
+        </div>
+        <canvas id="fire-canvas"></canvas>
+        <div id="ember-glow"></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         LEGEND PANEL (bottom right)
+    ════════════════════════════════════ -->
+    <div id="legend-panel">
+      <div class="legend-title">🎁 Regalos</div>
+      <div class="legend-item" id="legend-print">
+        <span class="legend-emoji">🌹</span>
+        <span class="legend-text">Rose → Print</span>
+      </div>
+      <div class="legend-item" id="legend-big">
+        <span class="legend-emoji">🍩</span>
+        <span class="legend-text">Donut → Big</span>
+      </div>
+      <div class="legend-item" id="legend-vip">
+        <span class="legend-emoji">👑</span>
+        <span class="legend-text">100+ → VIP</span>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         DEBUG HUD (press H)
+    ════════════════════════════════════ -->
+    <div id="debug-hud" class="hidden">
+      <span id="hud-ws">WS: —</span>
+      <span id="hud-queue">Queue: 0</span>
+      <span id="hud-fps">FPS: —</span>
+    </div>
+
+    <!-- ═══════════════════════════════════
+         MUTE BUTTON
+    ════════════════════════════════════ -->
+    <div id="mute-btn" title="M = Silenciar">🔊</div>
+
+    <!-- ═══════════════════════════════════
+         VIP OVERLAY (flash)
+    ════════════════════════════════════ -->
+    <div id="vip-overlay" class="hidden">
+      <div id="vip-title">👑 LEGENDARY VIP 👑</div>
+      <div id="vip-particles"></div>
+    </div>
+
+  </div><!-- /#scene -->
+
+  <script src="app.js"></script>
+</body>
+</html>
