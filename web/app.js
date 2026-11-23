@@ -180,27 +180,28 @@ async function printJob(job) {
   if (tier === 'print') {
     // Try to place 2 small cards per row
     if (pendingSmallRow && pendingSmallRow.count === 1) {
+      // Second card: just append to existing top row — no slide needed
       row = pendingSmallRow.el;
       row.appendChild(card);
       pendingSmallRow = null;
     } else {
+      // First small card: prepend a new row at the top and slide down
       row = document.createElement('div');
       row.className = 'print-row';
-      paperContent.appendChild(row);
+      paperContent.prepend(row);
       row.appendChild(card);
       pendingSmallRow = { el: row, count: 1 };
+      await slideRollDown(row);
     }
   } else {
     // big/vip: own full row, flush pending small row
     pendingSmallRow = null;
     row = document.createElement('div');
     row.className = 'print-row';
-    paperContent.appendChild(row);
+    paperContent.prepend(row);
     row.appendChild(card);
+    await slideRollDown(row);
   }
-
-  // Scroll paper so the new row is at the top of the visible area
-  await scrollPaperToShowLatest();
 
   // Wait a moment, then reveal the card top-to-bottom
   await sleep(200);
@@ -278,18 +279,25 @@ function createCardElement(job) {
 }
 
 // ============================================================
-// 6. PAPER SCROLLING
+// 6. PAPER SLIDING (new rows enter from top, push old ones down)
 // ============================================================
-function scrollPaperToShowLatest() {
+function slideRollDown(newRow) {
   return new Promise(resolve => {
     requestAnimationFrame(() => {
-      const contentHeight    = paperContent.scrollHeight;
-      const containerHeight  = paperContainer.clientHeight;
-      const overflow         = contentHeight - containerHeight;
-      if (overflow > 0) {
-        paperRoll.style.transition = `transform ${CONFIG.paper_scroll_speed_ms}ms cubic-bezier(0.25,0.46,0.45,0.94)`;
-        paperRoll.style.transform  = `translateY(-${overflow}px)`;
-      }
+      // Measure the height of the newly prepended row
+      const rowHeight = newRow.offsetHeight;
+
+      // Jump up by rowHeight (no animation) so the content looks unchanged
+      paperRoll.style.transition = 'none';
+      paperRoll.style.transform  = `translateY(-${rowHeight}px)`;
+
+      // Force reflow so the browser commits the instant jump
+      void paperRoll.offsetHeight;
+
+      // Animate back to 0 — this is the smooth downward slide
+      paperRoll.style.transition = `transform ${CONFIG.paper_scroll_speed_ms}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
+      paperRoll.style.transform  = 'translateY(0)';
+
       setTimeout(resolve, CONFIG.paper_scroll_speed_ms + 50);
     });
   });
@@ -299,21 +307,23 @@ function scrollPaperToShowLatest() {
 // 7. BURN OLD CARDS
 // ============================================================
 function burnOldCards() {
-  const cards = paperContent.querySelectorAll('.print-card:not(.burning):not(.burned)');
-  const fireY = window.innerHeight * 0.72; // approx fire zone top in viewport
+  // Use real position of the fire zone element, not a viewport percentage
+  const fireTop = document.getElementById('fire-zone').getBoundingClientRect().top;
 
+  const cards = paperContent.querySelectorAll('.print-card:not(.burning):not(.burned)');
   cards.forEach(card => {
     const rect = card.getBoundingClientRect();
-    // If card bottom is in or past the fire zone
-    if (rect.bottom > fireY || paperContent.children.length > 20) {
+    // Burn only cards whose bottom enters the fire zone (with 20px buffer)
+    if (rect.bottom >= fireTop + 20) {
       burnCard(card);
     }
   });
 
-  // Aggressive cleanup: keep at most 15 rows
+  // Aggressive cleanup: remove oldest rows (at the END of the container, since
+  // new rows are prepended so oldest ones sink to the bottom)
   const rows = paperContent.querySelectorAll('.print-row');
   if (rows.length > 15) {
-    for (let i = 0; i < rows.length - 15; i++) {
+    for (let i = rows.length - 1; i >= 15; i--) {
       rows[i].remove();
     }
   }

@@ -316,7 +316,7 @@ html, body {
   align-items: center;
   overflow: hidden;
   position: relative;
-  clip-path: inset(100% 0 0 0); /* Start hidden, revealed top-to-bottom */
+  clip-path: inset(0 0 100% 0); /* Start hidden, revealed top-to-bottom */
   transition: clip-path 0s linear;
 }
 
