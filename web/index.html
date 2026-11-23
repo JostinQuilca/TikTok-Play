@@ -3,106 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=1080" />
-  <title>TikTok Printer Live 🖨️🔥</title>
+  <title>TikTok Plotter 3D Live 🖨️✨</title>
   <link rel="stylesheet" href="styles.css" />
+  <!-- Three.js CDN -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
-  <!-- Main 1080x1920 canvas wrapper -->
+  <!-- Main 1080x1920 viewport wrapper -->
   <div id="scene">
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
 
-    <!-- ═══════════════════════════════════
-         PRINTER ZONE (top 55%)
-    ════════════════════════════════════ -->
-    <div id="printer-zone">
-      <!-- Ceiling mount / structure -->
-      <div id="printer-ceiling">
-        <div id="rail-left"></div>
-        <div id="rail-right"></div>
-        <div id="printer-body">
-          <div id="printer-logo">🖨️ PRINT-O-MATIC 3000</div>
-          <div id="carriage-track">
-            <div id="carriage">
-              <div id="printhead"></div>
-              <div id="ink-drops"></div>
-            </div>
-          </div>
-          <div id="paper-slot"></div>
-        </div>
-        <div id="vertical-rail-left"></div>
-        <div id="vertical-rail-right"></div>
-      </div>
+    <!-- Top Left Title Bar -->
+    <div id="top-bar">
+      <span class="live-badge">LIVE</span>
+      <span class="live-title">let me print your picture</span>
     </div>
 
-    <!-- ═══════════════════════════════════
-         PAPER ROLL (center, scrolling)
-    ════════════════════════════════════ -->
-    <div id="paper-container">
-      <div id="paper-roll">
-        <div id="paper-content">
-          <!-- Print jobs are injected here dynamically -->
-        </div>
-      </div>
-      <div id="paper-edge-left"></div>
-      <div id="paper-edge-right"></div>
+    <!-- Bottom Center Status Pill -->
+    <div id="status-pill">
+      <span class="status-dot"></span>
+      <span id="status-pill-text">Ready to print</span>
     </div>
 
-    <!-- ═══════════════════════════════════
-         FIRE ZONE (bottom 25%)
-    ════════════════════════════════════ -->
-    <div id="fire-zone">
-      <div id="campfire-base">
-        <div id="logs-container">
-          <div class="log log1"></div>
-          <div class="log log2"></div>
-          <div class="log log3"></div>
-        </div>
-        <canvas id="fire-canvas"></canvas>
-        <div id="ember-glow"></div>
-      </div>
-    </div>
-
-    <!-- ═══════════════════════════════════
-         LEGEND PANEL (bottom right)
-    ════════════════════════════════════ -->
+    <!-- Bottom Right Gift Legend -->
     <div id="legend-panel">
-      <div class="legend-title">🎁 Regalos</div>
+      <div class="legend-title">🎁 REGALOS</div>
       <div class="legend-item" id="legend-print">
         <span class="legend-emoji">🌹</span>
-        <span class="legend-text">Rose → Print</span>
+        <span class="legend-text">Rose → Print (1x1)</span>
       </div>
       <div class="legend-item" id="legend-big">
         <span class="legend-emoji">🍩</span>
-        <span class="legend-text">Donut → Big</span>
+        <span class="legend-text">Donut → Big (2x2)</span>
       </div>
       <div class="legend-item" id="legend-vip">
         <span class="legend-emoji">👑</span>
-        <span class="legend-text">100+ → VIP</span>
+        <span class="legend-text">100+ → SUPER VIP</span>
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════
-         DEBUG HUD (press H)
-    ════════════════════════════════════ -->
+    <!-- Debug HUD (Key H) -->
     <div id="debug-hud" class="hidden">
       <span id="hud-ws">WS: —</span>
       <span id="hud-queue">Queue: 0</span>
+      <span id="hud-page">Slot: 0/9</span>
       <span id="hud-fps">FPS: —</span>
     </div>
 
-    <!-- ═══════════════════════════════════
-         MUTE BUTTON
-    ════════════════════════════════════ -->
-    <div id="mute-btn" title="M = Silenciar">🔊</div>
-
-    <!-- ═══════════════════════════════════
-         VIP OVERLAY (flash)
-    ════════════════════════════════════ -->
-    <div id="vip-overlay" class="hidden">
-      <div id="vip-title">👑 LEGENDARY VIP 👑</div>
-      <div id="vip-particles"></div>
-    </div>
-
-  </div><!-- /#scene -->
+    <!-- Mute Button (Key M) -->
+    <div id="mute-btn" title="Presiona M o haz clic para silenciar">🔊</div>
+  </div>
 
   <script src="app.js"></script>
 </body>

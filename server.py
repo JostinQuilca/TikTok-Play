@@ -85,6 +85,11 @@ def setup_tiktok_client(username: str):
     try:
         from TikTokLive import TikTokLiveClient
         from TikTokLive.events import GiftEvent, ConnectEvent, DisconnectEvent
+        try:
+            from TikTokLive.events import FollowEvent, CommentEvent
+        except ImportError:
+            FollowEvent = None
+            CommentEvent = None
     except ImportError:
         log.error("TikTokLive not installed. Run: pip install TikTokLive")
         return None
@@ -137,6 +142,50 @@ def setup_tiktok_client(username: str):
         }
         log.info("Gift: %s → %s (tier=%s, diamonds=%d x%d)", event.user.unique_id, gift_name, tier, diamond_count, repeat_count)
         await broadcast(payload)
+
+    if FollowEvent:
+        @client.on(FollowEvent)
+        async def on_follow(event):
+            if not CONFIG.get("print_on_follow", False):
+                return
+            try:
+                avatar_url = event.user.avatar_thumb.url_list[0] if event.user.avatar_thumb and event.user.avatar_thumb.url_list else ""
+            except Exception:
+                avatar_url = ""
+            payload = {
+                "type":    "print_job",
+                "user":    event.user.nickname or event.user.unique_id or "NewFollower",
+                "avatar":  avatar_url,
+                "tier":    "print",
+                "gift":    "Follow",
+                "gift_id": 0,
+                "count":   1,
+                "diamonds": 0,
+            }
+            log.info("Follow: %s", payload["user"])
+            await broadcast(payload)
+
+    if CommentEvent:
+        @client.on(CommentEvent)
+        async def on_comment(event):
+            if not CONFIG.get("print_on_comment", False):
+                return
+            try:
+                avatar_url = event.user.avatar_thumb.url_list[0] if event.user.avatar_thumb and event.user.avatar_thumb.url_list else ""
+            except Exception:
+                avatar_url = ""
+            payload = {
+                "type":    "print_job",
+                "user":    event.user.nickname or event.user.unique_id or "Commenter",
+                "avatar":  avatar_url,
+                "tier":    "print",
+                "gift":    "Comment",
+                "gift_id": 0,
+                "count":   1,
+                "diamonds": 0,
+            }
+            log.info("Comment from %s", payload["user"])
+            await broadcast(payload)
 
     return client
 

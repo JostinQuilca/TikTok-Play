@@ -4,11 +4,12 @@
   "http_port": 8000,
   "print_speed_ms": 2500,
   "paper_scroll_speed_ms": 800,
-  "fire_intensity": 1.0,
+  "print_on_follow": false,
+  "print_on_comment": false,
   "audio_volume": 0.6,
   "gift_tiers": {
     "print": {
-      "label": "Rose → Print",
+      "label": "Rose → Print (1x1)",
       "emoji": "🌹",
       "max_diamonds": 29,
       "color": "#e8d5b7",
@@ -16,7 +17,7 @@
       "size": "small"
     },
     "big": {
-      "label": "Donut → Big Print",
+      "label": "Donut → Big (2x2)",
       "emoji": "🍩",
       "min_diamonds": 30,
       "max_diamonds": 99,
@@ -25,7 +26,7 @@
       "size": "big"
     },
     "vip": {
-      "label": "100+ → Legendary VIP",
+      "label": "100+ → SUPER VIP",
       "emoji": "👑",
       "min_diamonds": 100,
       "color": "#ff00ff",
