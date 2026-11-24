@@ -362,12 +362,25 @@ async def main(mock_mode: bool = False):
         client = setup_tiktok_client(username)
         if client:
             async def run_tiktok():
-                try:
-                    await client.start()
-                except Exception as e:
-                    log.error("TikTok connection error: %s — switching to MOCK mode.", e)
-                    await broadcast({"type": "status", "connected": False, "error": str(e)})
-                    asyncio.create_task(mock_event_generator())
+                clean_user = username.lstrip("@").strip()
+                while True:
+                    try:
+                        log.info("Checking if @%s is LIVE on TikTok...", clean_user)
+                        is_live = await client.is_live()
+                        if is_live:
+                            log.info("@%s is LIVE! Connecting to stream...", clean_user)
+                            await broadcast({"type": "status", "connected": True, "user": clean_user})
+                            await client.start()
+                        else:
+                            log.info("@%s is currently OFFLINE on TikTok. Retrying in 15s...", clean_user)
+                            await broadcast({"type": "status", "connected": False, "user": clean_user, "offline": True})
+                            await asyncio.sleep(15)
+                    except asyncio.CancelledError:
+                        break
+                    except Exception as e:
+                        log.warning("TikTok connection notice for @%s: %s. Retrying in 15s...", clean_user, e)
+                        await broadcast({"type": "status", "connected": False, "error": str(e)})
+                        await asyncio.sleep(15)
             tasks.append(asyncio.create_task(run_tiktok()))
         else:
             log.warning("TikTokLive unavailable, switching to MOCK mode.")

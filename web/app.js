@@ -1199,7 +1199,13 @@ function handleServerMessage(data) {
     CONFIG = { ...CONFIG, ...(data.data || {}) };
     updateLegend();
   } else if (data.type === 'status') {
-    updateHUD('ws', data.connected ? '🟢 Live' : '🟡 Disconnected');
+    if (data.connected) {
+      updateHUD('ws', `🟢 LIVE: @${data.user || ''}`);
+    } else if (data.offline) {
+      updateHUD('ws', `🟡 OFFLINE: @${data.user || ''}`);
+    } else {
+      updateHUD('ws', '🔴 Disconnected');
+    }
   }
 }
 
