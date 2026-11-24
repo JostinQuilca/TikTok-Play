@@ -81,6 +81,18 @@ def classify_gift(diamond_count: int) -> str:
 # ---------------------------------------------------------------------------
 # TikTok LIVE handler
 # ---------------------------------------------------------------------------
+def extract_avatar(user) -> str:
+    """Extract highest quality avatar URL from TikTokLive user object."""
+    if not user:
+        return ""
+    for attr in ["avatar_large", "avatar_medium", "avatar_thumb"]:
+        avatar_obj = getattr(user, attr, None)
+        if avatar_obj and getattr(avatar_obj, "url_list", None):
+            urls = avatar_obj.url_list
+            if urls and len(urls) > 0 and urls[0]:
+                return urls[0]
+    return ""
+
 def setup_tiktok_client(username: str):
     try:
         from TikTokLive import TikTokLiveClient
@@ -94,12 +106,14 @@ def setup_tiktok_client(username: str):
         log.error("TikTokLive not installed. Run: pip install TikTokLive")
         return None
 
-    client = TikTokLiveClient(unique_id=username)
+    clean_username = username.lstrip("@").strip()
+    log.info("Connecting to TikTok LIVE unique_id: '%s'", clean_username)
+    client = TikTokLiveClient(unique_id=clean_username)
 
     @client.on(ConnectEvent)
     async def on_connect(event):
-        log.info("Connected to TikTok LIVE as %s", event.unique_id)
-        await broadcast({"type": "status", "connected": True, "user": username})
+        log.info("Connected to TikTok LIVE as %s (Room ID: %s)", clean_username, getattr(event, 'room_id', 'N/A'))
+        await broadcast({"type": "status", "connected": True, "user": clean_username})
 
     @client.on(DisconnectEvent)
     async def on_disconnect(event):
@@ -112,11 +126,7 @@ def setup_tiktok_client(username: str):
         if event.gift.streakable and event.streaking:
             return
 
-        try:
-            avatar_url = event.user.avatar_thumb.url_list[0] if event.user.avatar_thumb and event.user.avatar_thumb.url_list else ""
-        except Exception:
-            avatar_url = ""
-
+        avatar_url = extract_avatar(event.user)
         diamond_count = getattr(event.gift, "diamond_count", 0) or 0
         repeat_count  = getattr(event, "repeat_count", 1) or 1
         gift_name     = getattr(event.gift, "name", "Unknown")
@@ -131,16 +141,16 @@ def setup_tiktok_client(username: str):
             tier = classify_gift(diamond_count)
 
         payload = {
-            "type":    "print_job",
-            "user":    event.user.nickname or event.user.unique_id or "Unknown",
-            "avatar":  avatar_url,
-            "tier":    tier,
-            "gift":    gift_name,
-            "gift_id": gift_id,
-            "count":   repeat_count,
+            "type":     "print_job",
+            "user":     event.user.nickname or event.user.unique_id or "Unknown",
+            "avatar":   avatar_url,
+            "tier":     tier,
+            "gift":     gift_name,
+            "gift_id":  gift_id,
+            "count":    repeat_count,
             "diamonds": diamond_count,
         }
-        log.info("Gift: %s → %s (tier=%s, diamonds=%d x%d)", event.user.unique_id, gift_name, tier, diamond_count, repeat_count)
+        log.info("Gift: %s → %s (tier=%s, diamonds=%d x%d, avatar=%s)", payload["user"], gift_name, tier, diamond_count, repeat_count, "OK" if avatar_url else "NONE")
         await broadcast(payload)
 
     if FollowEvent:
@@ -148,18 +158,15 @@ def setup_tiktok_client(username: str):
         async def on_follow(event):
             if not CONFIG.get("print_on_follow", False):
                 return
-            try:
-                avatar_url = event.user.avatar_thumb.url_list[0] if event.user.avatar_thumb and event.user.avatar_thumb.url_list else ""
-            except Exception:
-                avatar_url = ""
+            avatar_url = extract_avatar(event.user)
             payload = {
-                "type":    "print_job",
-                "user":    event.user.nickname or event.user.unique_id or "NewFollower",
-                "avatar":  avatar_url,
-                "tier":    "print",
-                "gift":    "Follow",
-                "gift_id": 0,
-                "count":   1,
+                "type":     "print_job",
+                "user":     event.user.nickname or event.user.unique_id or "NewFollower",
+                "avatar":   avatar_url,
+                "tier":     "print",
+                "gift":     "Follow",
+                "gift_id":  0,
+                "count":    1,
                 "diamonds": 0,
             }
             log.info("Follow: %s", payload["user"])
@@ -170,18 +177,15 @@ def setup_tiktok_client(username: str):
         async def on_comment(event):
             if not CONFIG.get("print_on_comment", False):
                 return
-            try:
-                avatar_url = event.user.avatar_thumb.url_list[0] if event.user.avatar_thumb and event.user.avatar_thumb.url_list else ""
-            except Exception:
-                avatar_url = ""
+            avatar_url = extract_avatar(event.user)
             payload = {
-                "type":    "print_job",
-                "user":    event.user.nickname or event.user.unique_id or "Commenter",
-                "avatar":  avatar_url,
-                "tier":    "print",
-                "gift":    "Comment",
-                "gift_id": 0,
-                "count":   1,
+                "type":     "print_job",
+                "user":     event.user.nickname or event.user.unique_id or "Commenter",
+                "avatar":   avatar_url,
+                "tier":     "print",
+                "gift":     "Comment",
+                "gift_id":  0,
+                "count":    1,
                 "diamonds": 0,
             }
             log.info("Comment from %s", payload["user"])
@@ -193,10 +197,30 @@ def setup_tiktok_client(username: str):
 # HTTP server (aiohttp) – serves /web and proxies avatar images
 # ---------------------------------------------------------------------------
 async def handle_avatar_proxy(request: web.Request) -> web.Response:
-    """Proxy avatar images to avoid CORS issues."""
+    """Proxy avatar images to avoid CORS issues and TikTok referrer restrictions."""
     url = request.query.get("url", "")
     if not url:
         return web.Response(status=400, text="Missing url param")
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.tiktok.com/",
+        }
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                data = await resp.read()
+                content_type = resp.headers.get("Content-Type", "image/jpeg")
+                return web.Response(
+                    body=data,
+                    content_type=content_type,
+                    headers={
+                        "Access-Control-Allow-Origin": "*",
+                        "Cache-Control": "public, max-age=86400"
+                    }
+                )
+    except Exception as e:
+        log.warning("Avatar proxy error for %s: %s", url, e)
+        return web.Response(status=502, text=str(e), headers={"Access-Control-Allow-Origin": "*"})
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as resp:
